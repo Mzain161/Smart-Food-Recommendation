@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmLink | West Yorkshire Farm Recommendations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to right, #edf2f4, #dfe9f3);
+        }
+        header {
+            background-color: #2f3e46;
+            color: #fff;
+            padding: 2rem;
+            text-align: center;
+        }
+        header h1 { margin: 0; font-size: 2.2rem; }
+        header p { font-size: 1rem; margin-top: 0.5rem; color: #dcdcdc; }
+        main {
+            max-width: 850px;
+            margin: 3rem auto;
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            margin-bottom: 1.5rem;
+            color: #2f3e46;
+            text-align: center;
+        }
+        form label {
+            display: block;
+            margin-top: 1.2rem;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+        button {
+            margin-top: 2rem;
+            background-color: #2f3e46;
+            color: white;
+            padding: 0.9rem 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: block;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+        button:hover { background-color: #354f52; }
+        .results {
+            margin-top: 3rem;
+        }
+        .result-card {
+            background-color: #ffffff;
+            border-left: 6px solid #2f3e46;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+        }
+        .result-card h4 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #2f3e46;
+        }
+        .result-card p {
+            margin: 0.3rem 0;
+            font-size: 0.95rem;
+            color: #444;
+        }
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1.5rem;
+            background-color: #2f3e46;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .loader {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .loader span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin: 3px;
+            background-color: #2f3e46;
+            border-radius: 50%;
+            animation: bounce 0.6s infinite alternate;
+        }
+        .loader span:nth-child(2) { animation-delay: 0.2s; }
+        .loader span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>FarmLink</h1>
+        <p>Discover the best local farm suppliers near you in West Yorkshire</p>
+    </header>
+    <main>
+        <h2>Get Your Personalised Farm Recommendations</h2>
+        <form id="recommendForm">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" name="name" placeholder="e.g. John Smith" required>
+
+            <label for="age">Age</label>
+            <input type="number" id="age" name="age" placeholder="e.g. 25" required>
+
+            <label for="occupation">Occupation</label>
+            <input type="text" id="occupation" name="occupation" placeholder="e.g. Student, Engineer" required>
+
+            <label for="education">Educational Qualification</label>
+            <input type="text" id="education" name="education" placeholder="e.g. High School, Degree" required>
+
+            <label for="postcode">Postcode</label>
+            <input type="text" id="postcode" name="postcode" placeholder="e.g. BD1 5BL" required>
+
+            <label for="item">Item Needed</label>
+            <input type="text" id="item" name="item" placeholder="e.g. Apples, Milk" required>
+
+            <label for="quantity">Quantity (kg)</label>
+            <input type="number" id="quantity" name="quantity" placeholder="e.g. 10" required>
+
+            <label for="preference">Preference</label>
+            <select id="preference" name="preference" required>
+                <option value="rating">Top Rated</option>
+                <option value="price">Lowest Price</option>
+                <option value="distance">Nearest</option>
+                <option value="quality">Best Quality</option>
+            </select>
+
+            <br><br>
+            <button type="submit">Get Recommendations</button>
+        </form>
+
+        <div class="loader" id="loading"><span></span><span></span><span></span></div>
+        <div class="results" id="results"></div>
+    </main>
+    <footer>
+        &copy; 2025 FarmLink | Developed for West Yorkshire Food Produce System
+    </footer>
+
+    <script>
+        const form = document.getElementById("recommendForm");
+        const resultsDiv = document.getElementById("results");
+        const loader = document.getElementById("loading");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            resultsDiv.innerHTML = "";
+            loader.style.display = "block";
+
+            const formData = new FormData(form);
+            try {
+                const response = await axios.post("/recommend", formData);
+                loader.style.display = "none";
+                const results = response.data.results || response.data.top_5;
+                const final = response.data.final || response.data.final_recommendation;
+
+                if (!results || !results.length) {
+                    resultsDiv.innerHTML = `<p>No matching suppliers found.</p>`;
+                    return;
+                }
+
+                // Show Top 5
+                results.forEach(result => {
+                    const card = document.createElement("div");
+                    card.className = "result-card";
+                    card.innerHTML = `
+                        <h4>${result.supplier}</h4>
+                        <p><strong>Location:</strong> ${result.farm_location}</p>
+                        <p><strong>Item:</strong> ${result.product_name}</p>
+                        <p><strong>Price per kg:</strong> £${result.price_per_kg}</p>
+                        <p><strong>Supplier Rating:</strong> ${result["Supplier Rating"]}</p>
+                        <p><strong>Distance:</strong> ${parseFloat(result.distance_km).toFixed(2)} km</p>
+                        <p><strong>Available Stock:</strong> ${result.available_stock_kg} kg</p>
+                    `;
+                    resultsDiv.appendChild(card);
+                });
+
+                // Show Final Recommendation
+                const best = document.createElement("div");
+                best.className = "result-card";
+                best.style.borderLeft = "6px solid green";
+                best.innerHTML = `
+                    <h4>⭐ Final Recommendation: ${final.supplier}</h4>
+                    <p><strong>Location:</strong> ${final.farm_location}</p>
+                    <p><strong>Item:</strong> ${final.product_name}</p>
+                    <p><strong>Price per kg:</strong> £${final.price_per_kg}</p>
+                    <p><strong>Supplier Rating:</strong> ${final["Supplier Rating"]}</p>
+                    <p><strong>Distance:</strong> ${parseFloat(final.distance_km).toFixed(2)} km</p>
+                    <p><strong>Available Stock:</strong> ${final.available_stock_kg} kg</p>
+                `;
+                resultsDiv.appendChild(best);
+
+            } catch (err) {
+                loader.style.display = "none";
+                resultsDiv.innerHTML = `<p style="color:red;">Error fetching recommendations.</p>`;
+                console.error("Error fetching recommendations:", err);
+            }
+        });
+    </script>
+</body>
+</html>
